@@ -41,9 +41,9 @@ module AIMethods
     # @return [String] The formatted prompt
     def build_prompt(method_name, args, context, block_given)
       arg_types = args.map(&:class).map(&:to_s).join(", ")
-      
+
       <<~PROMPT
-        You are a Ruby code generator. Given a method call, generate ONLY the Ruby code 
+        You are a Ruby code generator. Given a method call, generate ONLY the Ruby code
         to implement it. Return executable Ruby code that produces the expected result.
 
         Method called: #{method_name}
@@ -55,7 +55,11 @@ module AIMethods
 
         You may call any of the above methods in your implementation if useful.
         Respond with ONLY valid Ruby code, no markdown, no explanation.
-        The code should return/compute the result directly.
+
+        IMPORTANT: Your code must:
+        1. Define the method #{method_name}
+        2. Call the method with the given arguments: #{method_name}(#{args.map { |a| a.inspect }.join(', ')})
+        3. The last line must be the method call that returns the result
       PROMPT
     end
 
