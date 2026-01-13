@@ -1,0 +1,17 @@
+module Anthropic
+  module Models
+    type tool_union =
+      Anthropic::Tool
+      | Anthropic::ToolBash20250124
+      | Anthropic::ToolTextEditor20250124
+      | Anthropic::ToolTextEditor20250429
+      | Anthropic::ToolTextEditor20250728
+      | Anthropic::WebSearchTool20250305
+
+    module ToolUnion
+      extend Anthropic::Internal::Type::Union
+
+      def self?.variants: -> ::Array[Anthropic::Models::tool_union]
+    end
+  end
+end

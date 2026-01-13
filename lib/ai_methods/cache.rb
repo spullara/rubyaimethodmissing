@@ -1,4 +1,3 @@
-require 'sqlite3'
 require 'fileutils'
 
 module AIMethods
@@ -8,9 +7,19 @@ module AIMethods
     def initialize(db_path = nil)
       @db_path = expand_path(db_path || '~/.ai_methods/cache.db')
       ensure_db_directory
-      @db = SQLite3::Database.new(@db_path)
-      @db.results_as_hash = true
-      create_table
+
+      # Try to use SQLite3 if available, otherwise use in-memory cache
+      begin
+        require 'sqlite3'
+        @db = SQLite3::Database.new(@db_path)
+        @db.results_as_hash = true
+        create_table
+        @use_sqlite = true
+      rescue LoadError
+        # Fallback to in-memory cache
+        @cache = {}
+        @use_sqlite = false
+      end
     end
 
     # Find a cached method by class name and method name
@@ -18,28 +27,38 @@ module AIMethods
     # @param method_name [String] Name of the method
     # @return [String, nil] Generated code or nil if not found
     def find(class_name, method_name)
-      query = <<~SQL
-        SELECT generated_code FROM generated_methods
-        WHERE class_name = ? AND method_name = ?
-        LIMIT 1
-      SQL
-      
-      result = @db.execute(query, [class_name, method_name])
-      result.empty? ? nil : result[0]['generated_code']
+      if @use_sqlite
+        query = <<~SQL
+          SELECT generated_code FROM generated_methods
+          WHERE class_name = ? AND method_name = ?
+          LIMIT 1
+        SQL
+
+        result = @db.execute(query, [class_name, method_name])
+        result.empty? ? nil : result[0]['generated_code']
+      else
+        key = "#{class_name}:#{method_name}"
+        @cache[key]
+      end
     end
 
     # Find all methods for a given class
     # @param class_name [String] Name of the class
     # @return [Array<Hash>] Array of {method_name:, generated_code:} hashes
     def find_all_for_class(class_name)
-      query = <<~SQL
-        SELECT method_name, generated_code FROM generated_methods
-        WHERE class_name = ?
-        ORDER BY created_at ASC
-      SQL
-      
-      results = @db.execute(query, [class_name])
-      results.map { |row| { method_name: row['method_name'], generated_code: row['generated_code'] } }
+      if @use_sqlite
+        query = <<~SQL
+          SELECT method_name, generated_code FROM generated_methods
+          WHERE class_name = ?
+          ORDER BY created_at ASC
+        SQL
+
+        results = @db.execute(query, [class_name])
+        results.map { |row| { method_name: row['method_name'], generated_code: row['generated_code'] } }
+      else
+        @cache.select { |k, _| k.start_with?("#{class_name}:") }
+               .map { |k, v| { method_name: k.split(':')[1], generated_code: v } }
+      end
     end
 
     # Store a generated method in the cache
@@ -48,31 +67,39 @@ module AIMethods
     # @param signature [String] Method signature
     # @param code [String] Generated code
     def store(class_name, method_name, signature, code)
-      query = <<~SQL
-        INSERT OR REPLACE INTO generated_methods
-        (class_name, method_name, method_signature, generated_code, created_at)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-      SQL
-      
-      @db.execute(query, [class_name, method_name, signature, code])
+      if @use_sqlite
+        query = <<~SQL
+          INSERT OR REPLACE INTO generated_methods
+          (class_name, method_name, method_signature, generated_code, created_at)
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        SQL
+
+        @db.execute(query, [class_name, method_name, signature, code])
+      else
+        key = "#{class_name}:#{method_name}"
+        @cache[key] = code
+      end
     end
 
     # Update last_used_at and increment call_count for a method
     # @param class_name [String] Name of the class
     # @param method_name [String] Name of the method
     def touch(class_name, method_name)
-      query = <<~SQL
-        UPDATE generated_methods
-        SET last_used_at = CURRENT_TIMESTAMP, call_count = call_count + 1
-        WHERE class_name = ? AND method_name = ?
-      SQL
-      
-      @db.execute(query, [class_name, method_name])
+      if @use_sqlite
+        query = <<~SQL
+          UPDATE generated_methods
+          SET last_used_at = CURRENT_TIMESTAMP, call_count = call_count + 1
+          WHERE class_name = ? AND method_name = ?
+        SQL
+
+        @db.execute(query, [class_name, method_name])
+      end
+      # In-memory cache doesn't track usage stats
     end
 
     # Close the database connection
     def close
-      @db.close if @db
+      @db.close if @use_sqlite && @db
     end
 
     private

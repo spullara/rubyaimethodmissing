@@ -1,0 +1,47 @@
+# typed: strong
+
+module Anthropic
+  module Models
+    BetaToolUnion = Beta::BetaToolUnion
+
+    module Beta
+      # Configuration for a group of tools from an MCP server.
+      #
+      # Allows configuring enabled status and defer_loading for all tools from an MCP
+      # server, with optional per-tool overrides.
+      module BetaToolUnion
+        extend Anthropic::Internal::Type::Union
+
+        Variants =
+          T.type_alias do
+            T.any(
+              Anthropic::Beta::BetaTool,
+              Anthropic::Beta::BetaToolBash20241022,
+              Anthropic::Beta::BetaToolBash20250124,
+              Anthropic::Beta::BetaCodeExecutionTool20250522,
+              Anthropic::Beta::BetaCodeExecutionTool20250825,
+              Anthropic::Beta::BetaToolComputerUse20241022,
+              Anthropic::Beta::BetaMemoryTool20250818,
+              Anthropic::Beta::BetaToolComputerUse20250124,
+              Anthropic::Beta::BetaToolTextEditor20241022,
+              Anthropic::Beta::BetaToolComputerUse20251124,
+              Anthropic::Beta::BetaToolTextEditor20250124,
+              Anthropic::Beta::BetaToolTextEditor20250429,
+              Anthropic::Beta::BetaToolTextEditor20250728,
+              Anthropic::Beta::BetaWebSearchTool20250305,
+              Anthropic::Beta::BetaWebFetchTool20250910,
+              Anthropic::Beta::BetaToolSearchToolBm25_20251119,
+              Anthropic::Beta::BetaToolSearchToolRegex20251119,
+              Anthropic::Beta::BetaMCPToolset
+            )
+          end
+
+        sig do
+          override.returns(T::Array[Anthropic::Beta::BetaToolUnion::Variants])
+        end
+        def self.variants
+        end
+      end
+    end
+  end
+end

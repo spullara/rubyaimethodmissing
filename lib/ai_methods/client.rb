@@ -17,8 +17,8 @@ module AIMethods
     # @return [String] The generated Ruby code
     def generate_code(method_name, args, context:, block_given:)
       prompt = build_prompt(method_name, args, context, block_given)
-      
-      response = @client.messages(
+
+      response = @client.messages.create(
         model: @config.model,
         max_tokens: @config.max_tokens,
         messages: [
@@ -27,8 +27,6 @@ module AIMethods
       )
 
       extract_code(response)
-    rescue Anthropic::APIError => e
-      raise "Claude API error: #{e.message}"
     rescue StandardError => e
       raise "Failed to generate code: #{e.message}"
     end
@@ -62,11 +60,12 @@ module AIMethods
     end
 
     # Extract the code from Claude's response
-    # @param response [Hash] The API response
+    # @param response [Anthropic::Models::Message] The API response
     # @return [String] The extracted code
     def extract_code(response)
-      content = response.dig('content', 0, 'text')
-      
+      # The anthropic gem returns objects, not hashes
+      content = response.content&.first&.text
+
       if content.nil? || content.empty?
         raise "Claude returned empty response"
       end
@@ -75,7 +74,7 @@ module AIMethods
       code = content.strip
       code = code.sub(/^```ruby\n/, '').sub(/\n```$/, '') if code.start_with?('```')
       code = code.sub(/^```\n/, '').sub(/\n```$/, '') if code.start_with?('```')
-      
+
       code.strip
     end
   end

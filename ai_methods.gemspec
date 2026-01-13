@@ -14,10 +14,10 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "anthropic"
-  spec.add_dependency "sqlite3"
   spec.add_dependency "dotenv"
   spec.add_dependency "method_source"
+  spec.add_development_dependency "sqlite3"
 
-  spec.required_ruby_version = ">= 2.7.0"
+  spec.required_ruby_version = ">= 2.6.0"
 end
 
