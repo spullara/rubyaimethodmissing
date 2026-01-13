@@ -25,15 +25,15 @@ $api_calls = 0
 module AIMethods
   class Cache
     alias_method :original_find, :find
-    
-    def find(class_name, method_name)
-      result = original_find(class_name, method_name)
+
+    def find(class_name, method_name, method_signature)
+      result = original_find(class_name, method_name, method_signature)
       if result
         $cache_hits += 1
-        puts "  [CACHE HIT] #{class_name}##{method_name}"
+        puts "  [CACHE HIT] #{class_name}##{method_name}(#{method_signature})"
       else
         $cache_misses += 1
-        puts "  [CACHE MISS] #{class_name}##{method_name}"
+        puts "  [CACHE MISS] #{class_name}##{method_name}(#{method_signature})"
       end
       result
     end

@@ -24,7 +24,7 @@ puts "✓ Methods stored successfully"
 
 # Test 3: Find a single method
 puts "\n3. Testing #find..."
-code = cache.find("Calculator", "fibonacci")
+code = cache.find("Calculator", "fibonacci", "n")
 if code == "n <= 1 ? n : fibonacci(n-1) + fibonacci(n-2)"
   puts "✓ Found fibonacci method correctly"
 else
@@ -34,7 +34,7 @@ end
 
 # Test 4: Find non-existent method
 puts "\n4. Testing #find with non-existent method..."
-code = cache.find("Calculator", "nonexistent")
+code = cache.find("Calculator", "nonexistent", "")
 if code.nil?
   puts "✓ Correctly returned nil for non-existent method"
 else
@@ -66,14 +66,14 @@ end
 
 # Test 7: Touch method (update last_used_at and call_count)
 puts "\n7. Testing #touch..."
-cache.touch("Calculator", "fibonacci")
-cache.touch("Calculator", "fibonacci")
+cache.touch("Calculator", "fibonacci", "n")
+cache.touch("Calculator", "fibonacci", "n")
 puts "✓ Touch executed successfully"
 
 # Test 8: Verify INSERT OR REPLACE works
 puts "\n8. Testing INSERT OR REPLACE behavior..."
 cache.store("Calculator", "fibonacci", "n", "updated_code_here")
-code = cache.find("Calculator", "fibonacci")
+code = cache.find("Calculator", "fibonacci", "n")
 if code == "updated_code_here"
   puts "✓ INSERT OR REPLACE works correctly"
 else

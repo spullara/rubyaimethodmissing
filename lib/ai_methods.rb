@@ -29,11 +29,12 @@ module AIMethods
   def method_missing(method_name, *args, &block)
     cache = AIMethods::Cache.new
     class_name = self.class.name
+    signature = args.map(&:class).join(',')
 
     # 1. Check cache first
-    cached_code = cache.find(class_name, method_name.to_s)
+    cached_code = cache.find(class_name, method_name.to_s, signature)
     if cached_code
-      cache.touch(class_name, method_name.to_s)
+      cache.touch(class_name, method_name.to_s, signature)
       return execute_generated_code(cached_code, args, &block)
     end
 
@@ -42,7 +43,6 @@ module AIMethods
     context = context_builder.build(self.class)
 
     client = AIMethods::Client.new
-    signature = args.map(&:class).join(',')
 
     # 3. Generate code with retry logic on execution failure
     generated_code = generate_code_with_retry(

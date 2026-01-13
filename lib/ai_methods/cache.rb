@@ -22,22 +22,23 @@ module AIMethods
       end
     end
 
-    # Find a cached method by class name and method name
+    # Find a cached method by class name, method name, and signature
     # @param class_name [String] Name of the class
     # @param method_name [String] Name of the method
+    # @param method_signature [String] Method signature
     # @return [String, nil] Generated code or nil if not found
-    def find(class_name, method_name)
+    def find(class_name, method_name, method_signature)
       if @use_sqlite
         query = <<~SQL
           SELECT generated_code FROM generated_methods
-          WHERE class_name = ? AND method_name = ?
+          WHERE class_name = ? AND method_name = ? AND method_signature = ?
           LIMIT 1
         SQL
 
-        result = @db.execute(query, [class_name, method_name])
+        result = @db.execute(query, [class_name, method_name, method_signature])
         result.empty? ? nil : result[0]['generated_code']
       else
-        key = "#{class_name}:#{method_name}"
+        key = "#{class_name}:#{method_name}:#{method_signature}"
         @cache[key]
       end
     end
@@ -84,15 +85,16 @@ module AIMethods
     # Update last_used_at and increment call_count for a method
     # @param class_name [String] Name of the class
     # @param method_name [String] Name of the method
-    def touch(class_name, method_name)
+    # @param method_signature [String] Method signature
+    def touch(class_name, method_name, method_signature)
       if @use_sqlite
         query = <<~SQL
           UPDATE generated_methods
           SET last_used_at = CURRENT_TIMESTAMP, call_count = call_count + 1
-          WHERE class_name = ? AND method_name = ?
+          WHERE class_name = ? AND method_name = ? AND method_signature = ?
         SQL
 
-        @db.execute(query, [class_name, method_name])
+        @db.execute(query, [class_name, method_name, method_signature])
       end
       # In-memory cache doesn't track usage stats
     end
