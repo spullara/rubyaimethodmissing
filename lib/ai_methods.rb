@@ -41,18 +41,22 @@ module AIMethods
     context = context_builder.build(self.class)
 
     client = AIMethods::Client.new
-    generated_code = client.generate_code(
+    signature = args.map(&:class).join(',')
+
+    # 3. Generate code with retry logic on execution failure
+    generated_code = generate_code_with_retry(
+      client,
       method_name.to_s,
       args,
-      context: context,
-      block_given: block_given?
+      context,
+      block_given?,
+      max_retries: AIMethods.configuration.max_retries
     )
 
-    # 3. Store in cache
-    signature = args.map(&:class).join(',')
+    # 4. Store in cache ONLY after successful execution
     cache.store(class_name, method_name.to_s, signature, generated_code)
 
-    # 4. Execute and return
+    # 5. Execute and return
     execute_generated_code(generated_code, args, &block)
   end
 
@@ -62,6 +66,63 @@ module AIMethods
   end
 
   private
+
+  # Generate code with retry logic on execution failure
+  # @param client [Client] The Claude API client
+  # @param method_name [String] The method name
+  # @param args [Array] The arguments
+  # @param context [String] The context string
+  # @param block_given [Boolean] Whether a block was given
+  # @param max_retries [Integer] Maximum number of retries
+  # @return [String] The generated code
+  def generate_code_with_retry(client, method_name, args, context, block_given, max_retries: 2)
+    generated_code = client.generate_code(
+      method_name,
+      args,
+      context: context,
+      block_given: block_given
+    )
+
+    # Try to execute the code to validate it works before caching
+    begin
+      executor = AIMethods::Executor.new
+      executor.execute(generated_code, binding)
+      # If execution succeeds, return the code
+      return generated_code
+    rescue Interrupt, SignalException, SystemExit
+      # Propagate immediately - don't retry these
+      raise
+    rescue StandardError => e
+      # Retry with error context
+      if max_retries > 0
+        puts "[AIMethods] Code execution failed: #{e.class}: #{e.message}"
+        puts "[AIMethods] Retrying with error context (#{max_retries} retries left)..."
+
+        fixed_code = client.fix_code(
+          method_name,
+          args,
+          context: context,
+          block_given: block_given,
+          original_code: generated_code,
+          error_class: e.class.to_s,
+          error_message: e.message
+        )
+
+        # Recursively retry with the fixed code
+        return generate_code_with_retry(
+          client,
+          method_name,
+          args,
+          context,
+          block_given,
+          max_retries: max_retries - 1
+        )
+      else
+        # Out of retries, raise the error
+        raise
+      end
+    end
+  end
 
   # Execute generated code in instance context
   def execute_generated_code(code, args, &block)
