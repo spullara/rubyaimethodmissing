@@ -59,6 +59,25 @@ calc.factorial(5)  # => 120
 calc.fibonacci(20)  # => 6765
 ```
 
+## Running the Examples
+
+```bash
+# Install dependencies
+bundle install
+
+# Set up your API key
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY
+
+# Run the calculator example
+bundle exec ruby examples/calculator.rb
+```
+
+The calculator example demonstrates:
+- Generating fibonacci and factorial methods
+- Caching (second call uses cached code)
+- Method generation with full context
+
 ## Features
 
 - **Automatic Code Generation**: Just call any method and Claude figures out what you want
