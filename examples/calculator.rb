@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'cgi'
 require_relative '../lib/ai_methods'
 
 class Calculator
